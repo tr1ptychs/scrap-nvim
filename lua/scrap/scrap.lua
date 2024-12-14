@@ -1,13 +1,9 @@
 local M = {}
 
-local utils = require("utils")
-
 local win_id = nil
 local buf_id = nil
 local data_path = vim.fn.stdpath('data')
-local scrap_dir = data_path .. '/scrap'
-local scrap_file = scrap_dir .. '/pad.txt'
-local old_file = data_path .. '/scrap.txt'
+local scrap_file = data_path .. '/scrap.txt'
 
 -- defaults
 local config = {
@@ -15,15 +11,12 @@ local config = {
   q_to_close = true,
   width_coeff = 0.8,
   height_coeff = 0.8,
+  wrap_lines = true,
 }
 
 -- where defaults can be overwritten
 function M.setup(user_config)
   config = vim.tbl_extend('force', config, user_config or {})
-
-  if not utils.dir_exists(scrap_dir) then
-    vim.fn.mkdir(scrap_dir, 'p')
-  end
 end
 
 -- save
@@ -45,19 +38,8 @@ function M.load_pad()
     vim.api.nvim_buf_set_name(buf_id, 'ScrapPad')
   end
 
-  -- if still on old filepath, keep old file contents and migrate.
-  local file = io.open(old_file, 'r')
-  if file then
-    local content = file:read('*a')
-    file:close()
-    vim.api.nvim_buf_set_lines(buf_id, 0, -1, false, vim.split(content, '\n'))
-    os.remove(old_file)
-    M.save_pad()
-    return
-  end
-
   -- read file into buffer
-  file = io.open(scrap_file, 'r')
+  local file = io.open(scrap_file, 'r')
   if file then
     local content = file:read('*a')
     file:close()
@@ -85,6 +67,10 @@ function M.init_keymaps()
       '<Cmd>lua require("scrap").toggle_pad()<CR>',
       { noremap = true, silent = true })
   end
+end
+
+function M.init_opts(rows)
+  vim.api.nvim_set_option_value("wrap", config.wrap_lines, {})
 end
 
 -- open
@@ -124,7 +110,8 @@ function M.open_pad()
     end,
   })
 
-  M.init_keymaps()
+  M.init_keymaps(opts.row)
+  M.init_opts()
 end
 
 -- toggle (main)
